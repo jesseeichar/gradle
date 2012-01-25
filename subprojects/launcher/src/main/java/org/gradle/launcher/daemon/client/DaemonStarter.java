@@ -80,7 +80,7 @@ public class DaemonStarter implements Runnable {
         LOGGER.info("Starting daemon process: workingDir = {}, daemonArgs: {}", workingDir, args);
         try {
             workingDir.mkdirs();
-            if (OperatingSystem.current().isWindows()) {
+            if (OperatingSystem.current().isWindows() && false) {
                 StringBuilder commandLine = new StringBuilder();
                 for (String arg : args) {
                     commandLine.append('"');
@@ -89,6 +89,9 @@ public class DaemonStarter implements Runnable {
                 }
                 new WindowsProcessStarter().start(workingDir, commandLine.toString());
             } else {
+                if (OperatingSystem.current().isWindows()) {
+                    new WindowsProcessStarter().detachFromParentProcess();
+                }
                 Process process = new ProcessBuilder(args).redirectErrorStream(true).directory(workingDir).start();
                 new DaemonGreeter().verifyGreetingReceived(process);
 

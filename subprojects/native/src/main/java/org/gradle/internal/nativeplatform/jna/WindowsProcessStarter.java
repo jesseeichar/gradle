@@ -21,7 +21,8 @@ import com.sun.jna.WString;
 import java.io.File;
 import java.io.IOException;
 
-import static org.gradle.internal.nativeplatform.jna.Kernel32.*;
+import static org.gradle.internal.nativeplatform.jna.Kernel32.DETACHED_PROCESS;
+import static org.gradle.internal.nativeplatform.jna.Kernel32.INSTANCE;
 
 /**
  * Uses the native Windows CreateProcessW() function, instead of Java's Process.
@@ -43,7 +44,12 @@ public class WindowsProcessStarter {
                 new WString(dir.getAbsolutePath()), startupInfo, processInformation)) {
             throw new IOException("Could not start process. Errno: " + kernel32.GetLastError());
         }
+        kernel32.FreeConsole();
         kernel32.CloseHandle(processInformation.hProcess);
         kernel32.CloseHandle(processInformation.hThread);
+    }
+
+    public void detachFromParentProcess() {
+        INSTANCE.FreeConsole();
     }
 }

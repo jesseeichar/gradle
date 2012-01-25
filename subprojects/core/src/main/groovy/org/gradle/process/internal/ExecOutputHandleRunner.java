@@ -19,6 +19,7 @@ package org.gradle.process.internal;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.internal.CompositeStoppable;
+import org.gradle.internal.Stoppable;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,12 +27,13 @@ import java.io.OutputStream;
 /**
  * @author Tom Eyckmans
  */
-public class ExecOutputHandleRunner implements Runnable {
+public class ExecOutputHandleRunner implements Runnable, Stoppable {
     private final static Logger LOGGER = Logging.getLogger(ExecOutputHandleRunner.class);
 
     private final String displayName;
     private final InputStream inputStream;
     private final OutputStream outputStream;
+    private boolean stopRequested;
 
     public ExecOutputHandleRunner(String displayName, InputStream inputStream, OutputStream outputStream) {
         this.displayName = displayName;
@@ -43,16 +45,28 @@ public class ExecOutputHandleRunner implements Runnable {
         byte[] buffer = new byte[2048];
         try {
             while (true) {
-                int nread = inputStream.read(buffer);
-                if (nread < 0) {
+                int available = inputStream.available();
+                if (stopRequested && available == 0) {
                     break;
                 }
-                outputStream.write(buffer, 0, nread);
-                outputStream.flush();
+                if (available > 0) {
+                    int nread = inputStream.read(buffer);
+                    if (nread < 0) {
+                        break;
+                    }
+                    outputStream.write(buffer, 0, nread);
+                    outputStream.flush();
+                } else {
+                    Thread.sleep(250);
+                }
             }
             new CompositeStoppable(inputStream, outputStream).stop();
         } catch (Throwable t) {
             LOGGER.error(String.format("Could not %s.", displayName), t);
         }
+    }
+
+    public void stop() {
+        stopRequested = true;
     }
 }

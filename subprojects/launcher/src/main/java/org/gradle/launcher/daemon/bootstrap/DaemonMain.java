@@ -18,6 +18,7 @@ package org.gradle.launcher.daemon.bootstrap;
 import com.google.common.io.Files;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
+import org.gradle.internal.nativeplatform.jna.WindowsProcessStarter;
 import org.gradle.launcher.daemon.client.DaemonParameters;
 import org.gradle.launcher.daemon.context.DaemonContext;
 import org.gradle.launcher.daemon.logging.DaemonGreeter;
@@ -50,6 +51,7 @@ public class DaemonMain extends EntryPoint {
     final private int idleTimeoutMs;
 
     public static void main(String[] args) {
+        new WindowsProcessStarter().detachFromParentProcess();
         if (args.length != 3) {
             invalidArgs("3 arguments are required: <gradle-version> <daemon-dir> <timeout-millis>");
         }

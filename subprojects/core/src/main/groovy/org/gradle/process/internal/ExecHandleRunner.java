@@ -16,6 +16,7 @@
 
 package org.gradle.process.internal;
 
+import org.gradle.internal.CompositeStoppable;
 import org.gradle.messaging.concurrent.DefaultExecutorFactory;
 import org.gradle.util.DisconnectableInputStream;
 
@@ -41,7 +42,9 @@ public class ExecHandleRunner implements Runnable {
         this.processBuilderFactory = new ProcessBuilderFactory();
         this.execHandle = execHandle;
         this.lock = new Object();
-        this.threadPool = threadPool;
+        this.threadPool =  threadPool;
+        //separate thread pool is also an option - then we could stop it some other time, not blocking the tests
+//        this.threadPool =  new DefaultExecutorFactory().create(String.format("IO threads for process: %s", execHandle.toString()));
     }
 
     public void stopWaiting() {
@@ -56,6 +59,7 @@ public class ExecHandleRunner implements Runnable {
     public void run() {
         ProcessBuilder processBuilder = processBuilderFactory.createProcessBuilder(execHandle);
         int exitCode;
+        CompositeStoppable ioThreads = new CompositeStoppable();
         try {
             ExecOutputHandleRunner standardOutputRunner;
             ExecOutputHandleRunner errorOutputRunner;
@@ -83,10 +87,16 @@ public class ExecHandleRunner implements Runnable {
             threadPool.execute(standardOutputRunner);
             threadPool.execute(errorOutputRunner);
 
+            ioThreads.add(standardInputRunner);
+            ioThreads.add(standardOutputRunner);
+            ioThreads.add(errorOutputRunner);
+
             execHandle.started();
 
             exitCode = process.waitFor();
             instr.close();
+            //it should be stopped somewhere else but for the purpose of spiking it should do
+//            ioThreads.stop();
         } catch (Throwable t) {
             execHandle.failed(t);
             return;
